@@ -1,0 +1,25 @@
+# Node.js
+node_modules/
+.env
+*.db
+*.db-shm
+*.db-wal
+
+# Rust/Soroban
+target/
+Cargo.lock
+.stellar/
+
+# React
+build/
+dist/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
