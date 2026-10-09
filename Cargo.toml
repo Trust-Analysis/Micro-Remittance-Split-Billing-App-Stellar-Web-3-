@@ -1,16 +1,8 @@
-[package]
-name = "stellar_split_bill"
-version = "0.1.0"
-edition = "2021"
-
-[lib]
-crate-type = ["cdylib", "rlib"]
-
-[dependencies]
-soroban-sdk = "20.0.0"
-
-[dev-dependencies]
-soroban-sdk = { version = "20.0.0", features = ["testutils"] }
+[workspace]
+resolver = "2"
+members = [
+    "contracts/stellar_split_bill",
+]
 
 [profile.release]
 opt-level = "z"
