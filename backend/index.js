@@ -1,105 +1,46 @@
 require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const { 
-    rpc, 
-    Contract, 
-    nativeToScVal, 
-    scValToNative, 
-    Networks, 
-    Keypair, 
-    TransactionBuilder, 
-    BASE_FEE
-} = require('@stellar/stellar-sdk');
+const { createApp } = require('./app');
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+const PORT = parseInt(process.env.PORT, 10) || 3001;
+const CONTRACT_ID = process.env.CONTRACT_ID || '';
+const RPC_URL = process.env.RPC_URL || 'https://soroban-testnet.stellar.org';
 
-// Initialize the Stellar RPC client for Testnet
-const server = new rpc.Server('https://soroban-testnet.stellar.org');
+// Startup environment validation
+console.log('--- Starting Stellar Split-Bill Read Proxy ---');
+if (!CONTRACT_ID || CONTRACT_ID.includes('REPLACE')) {
+    console.warn('[WARN] CONTRACT_ID is not configured or using default placeholder.');
+    console.warn('       Contract read routes will return 503 until a valid CONTRACT_ID is provided in .env');
+} else if (!CONTRACT_ID.startsWith('C') || CONTRACT_ID.length !== 56) {
+    console.warn(`[WARN] CONTRACT_ID '${CONTRACT_ID}' does not match standard Stellar contract address format (C... 56 chars).`);
+} else {
+    console.log(`[INFO] Configured Contract ID: ${CONTRACT_ID}`);
+}
+console.log(`[INFO] Stellar RPC URL: ${RPC_URL}`);
 
-// Contract configuration
-const CONTRACT_ID = process.env.CONTRACT_ID || 'C_REPLACE_WITH_YOUR_ACTUAL_CONTRACT_ID';
-const contract = new Contract(CONTRACT_ID);
-
-// Random keypair for read-only transactions
-const simulateKeypair = Keypair.random();
-
-/**
- * GET /api/bill/:id
- * Fetches the current state of a Split Bill from the Soroban contract
- */
-app.get('/api/bill/:id', async (req, res) => {
-    try {
-        const billId = parseInt(req.params.id, 10);
-
-        // Build a read-only invocation to the "get_bill" function
-        const txBuilder = new TransactionBuilder(await server.getAccount(simulateKeypair.publicKey()), {
-            fee: BASE_FEE,
-            networkPassphrase: Networks.TESTNET,
-        });
-
-        const operation = contract.call('get_bill', nativeToScVal(billId, { type: 'u32' }));
-        const tx = txBuilder.addOperation(operation).setTimeout(30).build();
-
-        // Simulate the transaction to read the state
-        const simulation = await server.simulateTransaction(tx);
-
-        if (simulation.error) {
-            return res.status(404).json({ error: "Bill not found or contract error" });
-        }
-
-        // Convert the returned Soroban Value (ScVal) back to a JavaScript object
-        const result = scValToNative(simulation.result.retval);
-        
-        res.json({ success: true, bill: result });
-    } catch (error) {
-        console.error("Error fetching bill:", error);
-        res.status(500).json({ success: false, error: error.message });
-    }
+const app = createApp({
+    CONTRACT_ID,
+    RPC_URL,
 });
 
-/**
- * GET /api/bill-count
- * Gets the total number of bills created
- */
-app.get('/api/bill-count', async (req, res) => {
-    try {
-        const account = await server.getAccount(simulateKeypair.publicKey());
-        const txBuilder = new TransactionBuilder(account, {
-            fee: BASE_FEE,
-            networkPassphrase: Networks.TESTNET,
-        });
-
-        const operation = contract.call('get_bill_count');
-        const tx = txBuilder.addOperation(operation).setTimeout(30).build();
-
-        const simulation = await server.simulateTransaction(tx);
-
-        if (simulation.error) {
-            return res.status(400).json({ error: simulation.error });
-        }
-
-        const result = scValToNative(simulation.result.retval);
-        res.json({ success: true, count: result });
-    } catch (error) {
-        console.error("Error fetching bill count:", error);
-        res.status(500).json({ success: false, error: error.message });
-    }
+const server = app.listen(PORT, () => {
+    console.log(`[INFO] Server running on http://localhost:${PORT}`);
+    console.log(`[INFO] Health check available at http://localhost:${PORT}/health`);
 });
 
-/**
- * GET /health
- * Health check endpoint
- */
-app.get('/health', (req, res) => {
-    res.json({ status: 'ok', contract: CONTRACT_ID });
-});
+// Graceful shutdown
+function shutdown(signal) {
+    console.log(`\n[INFO] Received ${signal}. Shutting down gracefully...`);
+    server.close(() => {
+        console.log('[INFO] HTTP server closed. Process terminating.');
+        process.exit(0);
+    });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-    console.log(`Web 3 Backend server running on http://localhost:${PORT}`);
-    console.log(`Contract ID: ${CONTRACT_ID}`);
-    console.log(`Network: Testnet`);
-});
+    // Force terminate after 5 seconds if connections remain open
+    setTimeout(() => {
+        console.error('[ERROR] Force terminating after shutdown timeout.');
+        process.exit(1);
+    }, 5000);
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
