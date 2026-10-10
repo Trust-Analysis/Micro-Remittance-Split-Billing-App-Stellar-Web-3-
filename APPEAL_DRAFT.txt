@@ -9,7 +9,7 @@ Evaluator Query: What development work and improvements have you made since the 
 
 Following the rejection of our initial single-commit repository, we conducted an unsparing audit of the entire codebase and completely overhauled the project. The original submission contained duplicated root-level files, untyped contract panics, unverified claims, missing CI/CD, and absent backend validation.
 
-Since rejection, we implemented 9 structured Conventional Commits on the main branch, leaving the repository building and verifiable at every step. We restructured the workspace into clean tiers (contracts/stellar_split_bill, backend, frontend, docs, .github), upgraded the contract to Soroban SDK v29.0.0, enforced checked arithmetic and typed errors, implemented reentrancy locks and storage TTL policies, hardened the Express backend, built a modern dark-mode Web3 frontend with Freighter network validation, and authored an automated 32-test suite with 100% pass rates across Rust, Node, and React.
+Since rejection, we implemented 10 structured Conventional Commits on the main branch, leaving the repository building and verifiable at every step. We restructured the workspace into clean tiers (contracts/stellar_split_bill, backend, frontend, docs, .github), upgraded the contract to Soroban SDK v29.0.0, enforced checked arithmetic and typed errors, implemented reentrancy locks and storage TTL policies, hardened the Express backend, built a modern dark-mode Web3 frontend with Freighter network validation, and authored an automated 32-test suite with 100% pass rates across Rust, Node, and React.
 
 
 2. CONCRETE CODE AND SECURITY IMPROVEMENTS
