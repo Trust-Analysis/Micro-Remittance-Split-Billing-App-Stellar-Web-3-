@@ -51,6 +51,7 @@ The project adheres to [Conventional Commits](https://www.conventionalcommits.or
 - **Environment & Secret Hygiene**: Updated `.gitignore` across all directories. Confirmed zero private keys or secrets in repository history. Provided documented `.env.example` templates.
 
 ### CI/CD, Documentation & Governance
+- **Lockfile Tracking & CI Caching**: Added `backend/package-lock.json`, `frontend/package-lock.json`, and `Cargo.lock` to git tracking and removed lockfile ignores from `.gitignore` to enable deterministic CI builds with `actions/setup-node` caching and `npm ci`.
 - **GitHub Actions CI**:
   - `.github/workflows/rust.yml`: Automated `cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test`, and `wasm32v1-none` release compilation.
   - `.github/workflows/node.yml`: Automated backend linting, Jest testing, frontend React testing, and production Webpack build.
