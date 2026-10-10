@@ -1,0 +1,61 @@
+name: Rust Contract CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'contracts/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/rust.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'contracts/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/rust.yml'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  contract-check:
+    name: Lint, Test & Build WASM
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32v1-none, wasm32-unknown-unknown
+          components: rustfmt, clippy
+
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Code formatting check (rustfmt)
+        run: cargo fmt --check
+
+      - name: Clippy static analysis
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Run Soroban SDK unit tests
+        run: cargo test --workspace --verbose
+
+      - name: Build contract WASM target
+        env:
+          SOROBAN_SDK_BUILD_SYSTEM_SUPPORTS_SPEC_SHAKING_V2: "1"
+        run: cargo build --package stellar_split_bill --target wasm32v1-none --release
